@@ -1,8 +1,10 @@
 import axios from "axios";
 
-const api = axios.create({
-	baseURL: "/api", // proxy handles forwarding to backend
-	timeout: 5000,
+const instance = axios.create({
+	baseURL: "http://localhost:5000/api", // Add /api here
+	headers: {
+		"Content-Type": "application/json",
+	},
 });
 
-export default api;
+export default instance;

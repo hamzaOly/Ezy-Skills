@@ -8,7 +8,7 @@ const Home = () => {
 	const [data, setData] = useState(null);
 
 	useEffect(() => {
-		fetch("http://localhost:5000/api/test")
+		fetch("http://localhost:5000/api")
 			.then((res) => res.json())
 			.then((data) => {
 				console.log("API Response:", data);

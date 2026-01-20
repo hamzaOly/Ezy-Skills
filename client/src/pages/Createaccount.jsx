@@ -1,5 +1,29 @@
 import Frame from "../assets/login/Frame.png";
+import { useState } from "react";
+import api from "../services/axios";
+
 const Createaccount = () => {
+	const [email, setEmail] = useState("");
+	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
+	const [message, setMessage] = useState("");
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		try {
+			// ✅ Put the registration Axios call here
+			const res = await api.post("/auth/register", {
+				email,
+				password,
+				confirmPassword,
+			});
+
+			setMessage(res.data.message);
+		} catch (err) {
+			setMessage(err.response.data.message || "Error");
+		}
+	};
+
 	return (
 		<>
 			<div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -13,12 +37,14 @@ const Createaccount = () => {
 						</h1>
 
 						{/* Form */}
-						<form className="space-y-6">
+						<form onSubmit={handleSubmit} className="space-y-6">
 							{/* Email Input */}
 							<div>
 								<input
 									type="email"
 									placeholder="Email Address"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
 									className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-orange-500 focus:outline-none transition-colors text-gray-700 placeholder-gray-400"
 								/>
 							</div>
@@ -28,6 +54,8 @@ const Createaccount = () => {
 								<input
 									type="password"
 									placeholder="Password"
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
 									className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-orange-500 focus:outline-none transition-colors text-gray-700 placeholder-gray-400"
 								/>
 							</div>
@@ -35,12 +63,14 @@ const Createaccount = () => {
 							{/* Confirm Password Input */}
 							<div>
 								<input
+									value={confirmPassword}
+									onChange={(e) => setConfirmPassword(e.target.value)}
 									type="password"
 									placeholder="Password"
 									className="w-full px-4 py-3 border-b-2 border-gray-300 focus:border-orange-500 focus:outline-none transition-colors text-gray-700 placeholder-gray-400"
 								/>
 							</div>
-
+							<p>{message}</p>
 							{/* Remember Me Checkbox */}
 							<div className="flex items-center">
 								<input

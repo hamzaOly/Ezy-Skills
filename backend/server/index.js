@@ -3,7 +3,7 @@ import express from "express";
 import pkg from "pg";
 import dotenv from "dotenv";
 import cors from "cors";
-import authRouters, { setPool } from "../routes/auth.js";
+import authRouter, { setPool } from "../routes/auth.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -34,11 +34,14 @@ setPool(pool);
 	}
 })();
 
+app.get("/", (req, res) => {
+	res.json({ message: "Backend server is running!" });
+});
 // 4️⃣ Routes - Add /api prefix
 app.get("/api", (req, res) => {
 	res.json({ message: "API is running", timestamp: new Date() });
 });
-
+app.use("/api/auth", authRouter);
 app.get("/api/test", (req, res) => {
 	res.json({
 		message: "Backend is working!",

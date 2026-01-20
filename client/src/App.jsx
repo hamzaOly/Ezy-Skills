@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { getApiData } from "./services/api";
+import { getApiData } from "./services/api.js";
 import Home from "./pages/Home";
 import Navbar from "./layouts/NavBar";
 import Createaccount from "./pages/Createaccount";

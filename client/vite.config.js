@@ -23,4 +23,8 @@ export default defineConfig({
 			},
 		},
 	},
+	// Disable CSP in development
+	define: {
+		"process.env.NODE_ENV": JSON.stringify("development"),
+	},
 });

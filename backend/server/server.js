@@ -12,6 +12,13 @@ app.use(express.json()); // To parse JSON request bodies
 app.get("/api", (req, res) => {
 	res.json({ message: "Hello from the backend!" });
 });
+app.use((req, res, next) => {
+	res.setHeader(
+		"Content-Security-Policy",
+		"default-src 'self' http://localhost:5173",
+	);
+	next();
+});
 
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);

@@ -3,6 +3,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { getApiData } from "./services/api";
 import Home from "./pages/Home";
 import Navbar from "./layouts/NavBar";
+import Createaccount from "./pages/Createaccount";
+import Login from "./pages/LogIn";
 
 function App() {
 	const [message, setMessage] = useState("Loading...");
@@ -36,6 +38,8 @@ function App() {
 
 			<Routes>
 				<Route path="/" element={<Home />} />
+				<Route path="/createaccount" element={<Createaccount />} />
+				<Route path="/login" element={<Login />} />
 			</Routes>
 		</BrowserRouter>
 	);

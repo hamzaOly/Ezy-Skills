@@ -1,27 +1,23 @@
 import Frame from "../assets/login/Frame.png";
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { login } from "../services/authService";
 
 export default function Login() {
-	const [formData, setFormData] = useState({
-		email: "",
-		password: "",
-	});
+	const [formData, setFormData] = useState({ email: "", password: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
+	const navigate = useNavigate(); // use React Router navigate
+
 	const handleChange = (e) => {
-		setFormData({
-			...formData,
-			[e.target.name]: e.target.value,
-		});
+		setFormData({ ...formData, [e.target.name]: e.target.value });
 	};
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError("");
 
-		// Validation
 		if (!formData.email || !formData.password) {
 			setError("Email and password are required");
 			return;
@@ -29,11 +25,26 @@ export default function Login() {
 
 		try {
 			setLoading(true);
-			await login(formData.email, formData.password);
-			// Redirect to home page and reload to update navbar
-			window.location.href = "/";
+
+			// 🔹 login() returns { token, user }
+			const response = await login(formData.email, formData.password);
+
+			const loggedUser = response.user;
+
+			if (!loggedUser || !loggedUser.role) {
+				throw new Error("Invalid login response");
+			}
+
+			// ✅ ROLE-BASED REDIRECT
+			if (loggedUser.role === "teacher") {
+				navigate("/teacher-dashboard");
+			} else if (loggedUser.role === "admin") {
+				navigate("/admin-dashboard");
+			} else {
+				window.location.href = "/";
+			}
 		} catch (err) {
-			setError(err);
+			setError(err.message || err);
 		} finally {
 			setLoading(false);
 		}

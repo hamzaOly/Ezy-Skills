@@ -5,6 +5,8 @@ import Home from "./pages/Home";
 import Navbar from "./layouts/NavBar";
 import Register from "./pages/register";
 import Login from "./pages/LogIn";
+import Footer from "./components/Footer.jsx";
+import TeacherDashboard from "./components/TeacherDashboard/TeacherDashboard.jsx";
 import TeacherRegister from "./pages/Teacherregister.jsx";
 
 function App() {
@@ -42,7 +44,10 @@ function App() {
 				<Route path="/createaccount" element={<Register />} />
 				<Route path="/login" element={<Login />} />
 				<Route path="/register/teacher" element={<TeacherRegister />} />
+				<Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+				{/* <Route path="/admin-dashboard" element={<AdminDashboard />} /> */}
 			</Routes>
+			<Footer />
 		</BrowserRouter>
 	);
 }

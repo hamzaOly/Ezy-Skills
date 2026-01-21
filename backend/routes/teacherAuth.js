@@ -10,8 +10,8 @@ export const setPool = (dbPool) => {
 	pool = dbPool;
 };
 
-// Teacher Register
-router.post("/register/teacher", async (req, res) => {
+// Teacher Register - Route is /register (not /register/teacher)
+router.post("/register", async (req, res) => {
 	try {
 		const {
 			email,
@@ -27,9 +27,19 @@ router.post("/register/teacher", async (req, res) => {
 			hourly_rate,
 		} = req.body;
 
-		// Basic validation
-		if (!email || !password || !full_name || !bio || !specialization || !years_of_experience || !education) {
-			return res.status(400).json({ error: "All required fields must be filled" });
+		// Validation
+		if (
+			!email ||
+			!password ||
+			!full_name ||
+			!bio ||
+			!specialization ||
+			!years_of_experience ||
+			!education
+		) {
+			return res
+				.status(400)
+				.json({ error: "All required fields must be filled" });
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,15 +48,22 @@ router.post("/register/teacher", async (req, res) => {
 		}
 
 		if (password.length < 6) {
-			return res.status(400).json({ error: "Password must be at least 6 characters" });
+			return res
+				.status(400)
+				.json({ error: "Password must be at least 6 characters" });
 		}
 
 		if (bio.length < 50) {
-			return res.status(400).json({ error: "Bio must be at least 50 characters" });
+			return res
+				.status(400)
+				.json({ error: "Bio must be at least 50 characters" });
 		}
 
 		// Check if user exists
-		const userExists = await pool.query("SELECT id FROM users WHERE email = $1", [email]);
+		const userExists = await pool.query(
+			"SELECT id FROM users WHERE email = $1",
+			[email],
+		);
 		if (userExists.rows.length > 0) {
 			return res.status(400).json({ error: "Email already registered" });
 		}
@@ -61,7 +78,7 @@ router.post("/register/teacher", async (req, res) => {
 			// Create user with role 'teacher'
 			const userResult = await client.query(
 				"INSERT INTO users (email, password, full_name, phone, role) VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name",
-				[email, hashedPassword, full_name, phone, "teacher"]
+				[email, hashedPassword, full_name, phone, "teacher"],
 			);
 			const newUser = userResult.rows[0];
 
@@ -80,19 +97,24 @@ router.post("/register/teacher", async (req, res) => {
 					specialization,
 					years_of_experience,
 					education,
-					linkedin_url,
-					website_url,
-					hourly_rate,
-				]
+					linkedin_url || null,
+					website_url || null,
+					hourly_rate || null,
+				],
 			);
 
 			await client.query("COMMIT");
 
 			// Generate JWT
 			const token = jwt.sign(
-				{ userId: newUser.id, email: newUser.email, role: "teacher", teacherId: teacherResult.rows[0].id },
+				{
+					userId: newUser.id,
+					email: newUser.email,
+					role: "teacher",
+					teacherId: teacherResult.rows[0].id,
+				},
 				process.env.JWT_SECRET || "your-secret-key",
-				{ expiresIn: "7d" }
+				{ expiresIn: "7d" },
 			);
 
 			res.status(201).json({

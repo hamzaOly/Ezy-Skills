@@ -3,23 +3,26 @@ import express from "express";
 import pkg from "pg";
 import dotenv from "dotenv";
 import cors from "cors";
-
-import authRouter, { setPool as setAuthPool } from "../routes/auth.js";
-import teacherAuthRouter, {
-	setPool as setTeacherPool,
+import authRoutes, { setPool as setAuthPool } from "../routes/auth.js";
+import teacherAuthRoutes, {
+	setPool as setTeacherAuthPool,
 } from "../routes/teacherAuth.js";
+import teacherCoursesRoutes, {
+	setPool as setTeacherCoursesPool,
+} from "../routes/teacherCourses.js";
 
 dotenv.config();
 const { Pool } = pkg;
 
-// 1️⃣ Create Express app
+// Create Express app
 const app = express();
 
-// 2️⃣ Middlewares
-app.use(cors()); // allow requests from frontend
-app.use(express.json()); // parse JSON
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use("/uploads", express.static("uploads")); // Serve uploaded files
 
-// 3️⃣ PostgreSQL pool
+// PostgreSQL pool
 const pool = new Pool({
 	host: process.env.DB_HOST,
 	port: process.env.DB_PORT,
@@ -28,21 +31,22 @@ const pool = new Pool({
 	password: process.env.DB_PASSWORD,
 });
 
-// 4️⃣ Set pool for routers
+// Set pool for all routes
 setAuthPool(pool);
-setTeacherPool(pool);
+setTeacherAuthPool(pool);
+setTeacherCoursesPool(pool);
 
 // Test DB connection
 (async () => {
 	try {
 		const result = await pool.query("SELECT NOW()");
-		console.log("Connected to PostgreSQL:", result.rows[0]);
+		console.log("Connected to PostgreSQL ✅", result.rows[0]);
 	} catch (err) {
-		console.error("DB connection failed:", err.message);
+		console.error("DB connection failed ❌", err.message);
 	}
 })();
 
-// 5️⃣ Routes
+// Routes
 app.get("/", (req, res) => {
 	res.json({ message: "Backend server is running!" });
 });
@@ -51,29 +55,34 @@ app.get("/api", (req, res) => {
 	res.json({ message: "API is running", timestamp: new Date() });
 });
 
-// Main Auth Routes
-app.use("/api/auth", authRouter);
-
-// Teacher Auth Routes
-app.use("/api/teacher-auth", teacherAuthRouter);
-
-// Test route
 app.get("/api/test", (req, res) => {
 	res.json({ message: "Backend is working!", timestamp: new Date() });
 });
 
-// Users list route
+// Student & General Auth Routes
+app.use("/api/auth", authRoutes);
+
+// Teacher Auth Routes
+app.use("/api/auth/teacher", teacherAuthRoutes);
+
+// Teacher Courses Routes
+app.use("/api/teacher-courses", teacherCoursesRoutes);
+
+// Get all users (for testing)
 app.get("/api/users", async (req, res) => {
 	try {
-		const result = await pool.query("SELECT id, email, created_at FROM users");
+		const result = await pool.query(
+			"SELECT id, email, role, created_at FROM users ORDER BY created_at DESC",
+		);
 		res.json(result.rows);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
 	}
 });
 
-// 6️⃣ Start server
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-	console.log(`Server running on port ${PORT}`);
+	console.log(`✅ Server running on port ${PORT}`);
+	console.log(`📍 API available at http://localhost:${PORT}/api`);
 });

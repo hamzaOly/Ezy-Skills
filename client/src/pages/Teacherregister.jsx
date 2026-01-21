@@ -119,7 +119,7 @@ export default function TeacherRegister() {
 
 			// Call your backend API here
 			const response = await fetch(
-				"http://localhost:5000/api/teacher-auth/register",
+				"http://localhost:5000/api/auth/teacher/register",
 				{
 					method: "POST",
 					headers: {

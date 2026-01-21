@@ -3,7 +3,11 @@ import express from "express";
 import pkg from "pg";
 import dotenv from "dotenv";
 import cors from "cors";
-import authRouter, { setPool } from "../routes/auth.js";
+
+import authRouter, { setPool as setAuthPool } from "../routes/auth.js";
+import teacherAuthRouter, {
+	setPool as setTeacherPool,
+} from "../routes/teacherAuth.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -12,7 +16,7 @@ const { Pool } = pkg;
 const app = express();
 
 // 2️⃣ Middlewares
-app.use(cors()); // allow requests from React
+app.use(cors()); // allow requests from frontend
 app.use(express.json()); // parse JSON
 
 // 3️⃣ PostgreSQL pool
@@ -23,31 +27,42 @@ const pool = new Pool({
 	user: process.env.DB_USER,
 	password: process.env.DB_PASSWORD,
 });
-setPool(pool);
+
+// 4️⃣ Set pool for routers
+setAuthPool(pool);
+setTeacherPool(pool);
+
 // Test DB connection
 (async () => {
 	try {
 		const result = await pool.query("SELECT NOW()");
-		console.log("Connected to PostgreSQL", result.rows[0]);
+		console.log("Connected to PostgreSQL:", result.rows[0]);
 	} catch (err) {
-		console.error("DB connection failed", err.message);
+		console.error("DB connection failed:", err.message);
 	}
 })();
 
+// 5️⃣ Routes
 app.get("/", (req, res) => {
 	res.json({ message: "Backend server is running!" });
 });
-// 4️⃣ Routes - Add /api prefix
+
 app.get("/api", (req, res) => {
 	res.json({ message: "API is running", timestamp: new Date() });
 });
+
+// Main Auth Routes
 app.use("/api/auth", authRouter);
+
+// Teacher Auth Routes
+app.use("/api/teacher-auth", teacherAuthRouter);
+
+// Test route
 app.get("/api/test", (req, res) => {
-	res.json({
-		message: "Backend is working!",
-		timestamp: new Date(),
-	});
+	res.json({ message: "Backend is working!", timestamp: new Date() });
 });
+
+// Users list route
 app.get("/api/users", async (req, res) => {
 	try {
 		const result = await pool.query("SELECT id, email, created_at FROM users");
@@ -57,7 +72,7 @@ app.get("/api/users", async (req, res) => {
 	}
 });
 
-// 5️⃣ Start server
+// 6️⃣ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`);

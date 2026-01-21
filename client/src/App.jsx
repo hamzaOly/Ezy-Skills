@@ -3,8 +3,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { getApiData } from "./services/api.js";
 import Home from "./pages/Home";
 import Navbar from "./layouts/NavBar";
-import Createaccount from "./pages/Createaccount";
+import Register from "./pages/register";
 import Login from "./pages/LogIn";
+import TeacherRegister from "./pages/Teacherregister.jsx";
 
 function App() {
 	const [message, setMessage] = useState("Loading...");
@@ -38,8 +39,9 @@ function App() {
 
 			<Routes>
 				<Route path="/" element={<Home />} />
-				<Route path="/createaccount" element={<Createaccount />} />
+				<Route path="/createaccount" element={<Register />} />
 				<Route path="/login" element={<Login />} />
+				<Route path="/register/teacher" element={<TeacherRegister />} />
 			</Routes>
 		</BrowserRouter>
 	);

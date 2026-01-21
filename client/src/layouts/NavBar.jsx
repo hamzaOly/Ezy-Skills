@@ -1,12 +1,21 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+	getCurrentUser,
+	logout,
+	isAuthenticated,
+} from "../services/authService";
 import logo from "../assets/logo.png";
 
 export default function Navbar() {
 	const [isOpen, setIsOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
+	const [user, setUser] = useState(() => {
+		// Initialize user state from localStorage
+		return isAuthenticated() ? getCurrentUser() : null;
+	});
 	const location = useLocation();
-	// const [clcik, setclick] = useState();
+	const navigate = useNavigate();
 
 	// Detect scroll
 	useEffect(() => {
@@ -16,8 +25,6 @@ export default function Navbar() {
 		window.addEventListener("scroll", handleScroll);
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
-
-	const navigate = useNavigate();
 
 	const navigation = [
 		{ name: "Home", href: "/" },
@@ -33,8 +40,15 @@ export default function Navbar() {
 	const handleCreateAccountClick = () => {
 		navigate("/createaccount");
 	};
+
 	const handleLoginClick = () => {
 		navigate("/login");
+	};
+
+	const handleLogout = () => {
+		logout();
+		setUser(null);
+		navigate("/");
 	};
 
 	return (
@@ -65,35 +79,86 @@ export default function Navbar() {
 							</Link>
 						))}
 
-						<Link to="/login">
-							<button
-								className="text-sm font-medium px-6 py-2 rounded-md border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-all duration-200 whitespace-nowrap"
-								onMouseEnter={(e) => {
-									e.target.style.backgroundColor = "#FF5329";
-									e.target.style.color = "white";
-								}}
-								onMouseLeave={(e) => {
-									e.target.style.backgroundColor = "white";
-									e.target.style.color = "#FF5329";
-								}}
-								onClick={handleLoginClick}>
-								Log In
-							</button>
-						</Link>
-						<Link to={"/createaccount"}>
-							<button
-								onClick={handleCreateAccountClick}
-								className="text-sm font-medium px-6 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 transition-all duration-200 whitespace-nowrap"
-								style={{ backgroundColor: "#FF5329" }}
-								onMouseEnter={(e) =>
-									(e.target.style.backgroundColor = "#E64A24")
-								}
-								onMouseLeave={(e) =>
-									(e.target.style.backgroundColor = "#FF5329")
-								}>
-								Create Account
-							</button>
-						</Link>
+						{/* Show user info if logged in, otherwise show login/create account buttons */}
+						{user ? (
+							<div className="relative group">
+								<button className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors">
+									<div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold">
+										{user.email?.charAt(0).toUpperCase()}
+									</div>
+									<span className="max-w-37.5 truncate">{user.email}</span>
+									<svg
+										className="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24">
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={2}
+											d="M19 9l-7 7-7-7"
+										/>
+									</svg>
+								</button>
+
+								{/* Dropdown Menu */}
+								<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+									<Link
+										to="/dashboard"
+										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+										Dashboard
+									</Link>
+									<Link
+										to="/my-courses"
+										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+										My Courses
+									</Link>
+									<Link
+										to="/profile"
+										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+										Profile
+									</Link>
+									<hr className="my-2" />
+									<button
+										onClick={handleLogout}
+										className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors">
+										Logout
+									</button>
+								</div>
+							</div>
+						) : (
+							<>
+								<Link to="/login">
+									<button
+										className="text-sm font-medium px-6 py-2 rounded-md border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-all duration-200 whitespace-nowrap"
+										onMouseEnter={(e) => {
+											e.target.style.backgroundColor = "#FF5329";
+											e.target.style.color = "white";
+										}}
+										onMouseLeave={(e) => {
+											e.target.style.backgroundColor = "white";
+											e.target.style.color = "#FF5329";
+										}}
+										onClick={handleLoginClick}>
+										Log In
+									</button>
+								</Link>
+								<Link to={"/createaccount"}>
+									<button
+										onClick={handleCreateAccountClick}
+										className="text-sm font-medium px-6 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 transition-all duration-200 whitespace-nowrap"
+										style={{ backgroundColor: "#FF5329" }}
+										onMouseEnter={(e) =>
+											(e.target.style.backgroundColor = "#E64A24")
+										}
+										onMouseLeave={(e) =>
+											(e.target.style.backgroundColor = "#FF5329")
+										}>
+										Create Account
+									</button>
+								</Link>
+							</>
+						)}
 					</div>
 
 					<button
@@ -133,6 +198,7 @@ export default function Navbar() {
 				</div>
 			</div>
 
+			{/* Mobile Menu */}
 			{isOpen && (
 				<div className="lg:hidden border-t border-gray-200 bg-white">
 					<div className="px-4 pt-2 pb-4 space-y-1">
@@ -151,21 +217,49 @@ export default function Navbar() {
 						))}
 
 						<div className="pt-4 space-y-2">
-							<Link to={"/login"}>
-								<button
-									onClick={handleLoginClick}
-									className="w-full px-4 py-3 rounded-md text-sm font-medium border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-colors duration-200">
-									Log In
-								</button>
-							</Link>
-							<Link to={"/createaccount"}>
-								<button
-									onClick={handleCreateAccountClick}
-									className="w-full px-4 py-3 rounded-md text-sm font-medium text-white transition-colors duration-200"
-									style={{ backgroundColor: "#FF5329" }}>
-									Create Account
-								</button>
-							</Link>
+							{user ? (
+								<>
+									<div className="px-4 py-2 text-sm text-gray-700 font-semibold border-b border-gray-200">
+										{user.email}
+									</div>
+									<Link to="/dashboard" onClick={() => setIsOpen(false)}>
+										<button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+											Dashboard
+										</button>
+									</Link>
+									<Link to="/my-courses" onClick={() => setIsOpen(false)}>
+										<button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+											My Courses
+										</button>
+									</Link>
+									<button
+										onClick={() => {
+											handleLogout();
+											setIsOpen(false);
+										}}
+										className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-gray-50 rounded-md transition-colors">
+										Logout
+									</button>
+								</>
+							) : (
+								<>
+									<Link to={"/login"}>
+										<button
+											onClick={handleLoginClick}
+											className="w-full px-4 py-3 rounded-md text-sm font-medium border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-colors duration-200">
+											Log In
+										</button>
+									</Link>
+									<Link to={"/createaccount"}>
+										<button
+											onClick={handleCreateAccountClick}
+											className="w-full px-4 py-3 rounded-md text-sm font-medium text-white transition-colors duration-200"
+											style={{ backgroundColor: "#FF5329" }}>
+											Create Account
+										</button>
+									</Link>
+								</>
+							)}
 						</div>
 					</div>
 				</div>

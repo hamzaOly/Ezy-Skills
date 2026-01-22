@@ -3,6 +3,9 @@ import HeroSection from "../components/HeroSection";
 import Carousel from "../components/Carousel";
 import WhoCanJoin from "../components/whoCanJoin";
 import HowItWorks from "../components/HowItworks";
+import PopularCourses from "../components/PopularCourses.jsx";
+import AchievementsMentors from "../components/Achivements.jsx";
+import CertificationsCollaborations from "../components/Certificationscollaborations.jsx";
 
 const Home = () => {
 	const [data, setData] = useState(null);
@@ -24,6 +27,9 @@ const Home = () => {
 			<Carousel />
 			<WhoCanJoin />
 			<HowItWorks />
+			<PopularCourses />
+			<AchievementsMentors />
+			<CertificationsCollaborations />
 		</div>
 	);
 };

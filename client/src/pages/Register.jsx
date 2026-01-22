@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { register } from "../services/authService";
+import { Link } from "react-router-dom";
 
 export default function Register() {
 	const [formData, setFormData] = useState({
@@ -110,8 +111,15 @@ export default function Register() {
 							}`}>
 							{loading ? "Creating Account..." : "Create Account"}
 						</button>
+						<Link to="/register/teacher">
+							<button
+								type="button"
+								className=" w-full px-6 py-3 border-2 border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors font-semibold">
+								Create Teacher Account
+							</button>
+						</Link>
 
-						<p className="text-center text-sm text-gray-600">
+						<p className="p-2 text-center text-sm text-gray-600">
 							Already Created?{" "}
 							<a href="/login" className="text-blue-600 hover:underline">
 								Login Here

@@ -4,12 +4,18 @@ import pkg from "pg";
 import dotenv from "dotenv";
 import cors from "cors";
 import authRoutes, { setPool as setAuthPool } from "../routes/auth.js";
+import adminRoutes, { setPool as setAdminPool } from "../routes/admin.js";
+import teacherBundlesRoutes, {
+	setPool as setTeacherBundlesPool,
+} from "../routes/TeacherBundles.js";
 import teacherAuthRoutes, {
 	setPool as setTeacherAuthPool,
 } from "../routes/teacherAuth.js";
 import teacherCoursesRoutes, {
 	setPool as setTeacherCoursesPool,
 } from "../routes/teacherCourses.js";
+
+import coursesRoutes, { setPool as setCoursesPool } from "../routes/Courses.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -33,8 +39,12 @@ const pool = new Pool({
 
 // Set pool for all routes
 setAuthPool(pool);
+setAdminPool(pool);
 setTeacherAuthPool(pool);
 setTeacherCoursesPool(pool);
+setTeacherBundlesPool(pool);
+setCoursesPool(pool);
+setTeacherBundlesPool(pool);
 
 // Test DB connection
 (async () => {
@@ -58,6 +68,11 @@ app.get("/api", (req, res) => {
 app.get("/api/test", (req, res) => {
 	res.json({ message: "Backend is working!", timestamp: new Date() });
 });
+
+app.use("/api/teacher-bundles", teacherBundlesRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/courses", coursesRoutes);
+app.use("/api/teacher-bundles", teacherBundlesRoutes);
 
 // Student & General Auth Routes
 app.use("/api/auth", authRoutes);

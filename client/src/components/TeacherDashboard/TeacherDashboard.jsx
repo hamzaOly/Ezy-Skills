@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import TeacherCourseForm from "./TeacherCoursesForm.jsx";
 import TeacherCoursesList from "./TeacherCoursesList";
+import { Link } from "react-router-dom";
 
 export default function TeacherDashboard() {
 	const [courses, setCourses] = useState([]);
@@ -45,7 +46,7 @@ export default function TeacherDashboard() {
 				<TeacherCourseForm
 					onCourseCreated={fetchCourses} // make sure form calls this after success
 				/>
-
+				<Link to="/create-bundle">Create Course Bundle</Link>
 				{/* List of existing courses */}
 				{loading ? (
 					<p>Loading courses...</p>

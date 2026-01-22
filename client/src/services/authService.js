@@ -31,6 +31,7 @@ export const login = async (email, password) => {
 	} catch (error) {
 		throw error.response?.data?.error;
 	}
+	
 };
 
 export const logout = () => {

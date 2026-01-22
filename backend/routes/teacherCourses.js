@@ -125,8 +125,8 @@ router.post(
 
 			const result = await pool.query(
 				`INSERT INTO courses 
-          (title, description, category, level, duration_hours, price, thumbnail_url, demo_video_url, created_by, teacher_id, instructor_name)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+          (title, description, category, level, duration_hours, price, thumbnail_url, demo_video_url, created_by, teacher_id, instructor_name, approval_status)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'pending') RETURNING *`,
 				[
 					title,
 					description,
@@ -142,8 +142,11 @@ router.post(
 				],
 			);
 
-			console.log("Course created:", result.rows[0]);
-			res.status(201).json({ course: result.rows[0] });
+			console.log("Course created (pending approval):", result.rows[0]);
+			res.status(201).json({
+				course: result.rows[0],
+				message: "Course created successfully! Waiting for admin approval.",
+			});
 		} catch (err) {
 			console.error("Error creating course:", err);
 			res.status(500).json({ error: "Server error", details: err.message });

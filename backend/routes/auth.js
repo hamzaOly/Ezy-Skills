@@ -1,4 +1,4 @@
-// backend/routes/auth.js - Student Authentication Only
+// backend/routes/auth.js - Student Authentication + Generic Login
 import express from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -70,7 +70,7 @@ router.post("/register", async (req, res) => {
 	}
 });
 
-// Login (for both students and teachers)
+// ✅ FIXED: Login (works for both students and teachers)
 router.post("/login", async (req, res) => {
 	try {
 		const { email, password } = req.body;
@@ -80,7 +80,7 @@ router.post("/login", async (req, res) => {
 		}
 
 		const result = await pool.query(
-			"SELECT id, email, password, role FROM users WHERE email = $1",
+			"SELECT id, email, password, role, full_name FROM users WHERE email = $1",
 			[email],
 		);
 
@@ -95,8 +95,26 @@ router.post("/login", async (req, res) => {
 			return res.status(401).json({ error: "Invalid email or password" });
 		}
 
+		// ✅ If teacher, get teacherId
+		let tokenPayload = {
+			userId: user.id,
+			email: user.email,
+			role: user.role,
+		};
+
+		if (user.role === "teacher") {
+			const teacherResult = await pool.query(
+				"SELECT id FROM teachers WHERE user_id = $1",
+				[user.id],
+			);
+
+			if (teacherResult.rows.length > 0) {
+				tokenPayload.teacherId = teacherResult.rows[0].id;
+			}
+		}
+
 		const token = jwt.sign(
-			{ userId: user.id, email: user.email, role: user.role },
+			tokenPayload,
 			process.env.JWT_SECRET || "your-secret-key",
 			{ expiresIn: "7d" },
 		);
@@ -106,7 +124,9 @@ router.post("/login", async (req, res) => {
 			user: {
 				id: user.id,
 				email: user.email,
+				full_name: user.full_name,
 				role: user.role,
+				...(tokenPayload.teacherId && { teacherId: tokenPayload.teacherId }),
 			},
 			token,
 		});

@@ -22,7 +22,7 @@ const Home = () => {
 
 	return (
 		<div className="bg-white">
-			<p>API Data: {data ? data.message : "Loading..."}</p>
+			<p className="hidden">API Data: {data ? data.message : "Loading..."}</p>
 			<HeroSection />
 			<Carousel />
 			<WhoCanJoin />

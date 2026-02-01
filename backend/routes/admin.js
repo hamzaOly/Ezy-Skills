@@ -1,6 +1,5 @@
 // backend/routes/admin.js
 import express from "express";
-import jwt from "jsonwebtoken";
 
 const router = express.Router();
 let pool;
@@ -9,26 +8,7 @@ export const setPool = (dbPool) => {
 	pool = dbPool;
 };
 
-// Middleware to verify admin token
-const adminMiddleware = (req, res, next) => {
-	const authHeader = req.headers.authorization;
-	if (!authHeader) return res.status(401).json({ error: "No token provided" });
-
-	const token = authHeader.split(" ")[1];
-	try {
-		const decoded = jwt.verify(
-			token,
-			process.env.JWT_SECRET || "your-secret-key",
-		);
-		if (decoded.role !== "admin") {
-			return res.status(403).json({ error: "Admin access required" });
-		}
-		req.user = decoded;
-		next();
-	} catch (err) {
-		return res.status(401).json({ error: "Invalid token" });
-	}
-};
+// ✅ NO DUPLICATE MIDDLEWARE - Uses the one from index.js (authenticateToken + requireAdmin)
 
 // Get all users
 router.get("/users", async (req, res) => {
@@ -56,6 +36,23 @@ router.get("/courses", async (req, res) => {
 	}
 });
 
+// Get approved courses (for creating bundles)
+router.get("/courses/approved", async (req, res) => {
+	try {
+		const result = await pool.query(`
+			SELECT c.*, t.full_name as teacher_name
+			FROM courses c
+			LEFT JOIN teachers t ON c.teacher_id = t.id
+			WHERE c.approval_status = 'approved'
+			ORDER BY c.created_at DESC
+		`);
+		res.json({ courses: result.rows });
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Server error" });
+	}
+});
+
 // Get all teachers
 router.get("/teachers", async (req, res) => {
 	try {
@@ -70,7 +67,7 @@ router.get("/teachers", async (req, res) => {
 });
 
 // Delete user
-router.delete("/users/:id", adminMiddleware, async (req, res) => {
+router.delete("/users/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -91,7 +88,7 @@ router.delete("/users/:id", adminMiddleware, async (req, res) => {
 });
 
 // Delete course
-router.delete("/courses/:id", adminMiddleware, async (req, res) => {
+router.delete("/courses/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -112,7 +109,7 @@ router.delete("/courses/:id", adminMiddleware, async (req, res) => {
 });
 
 // Verify/Unverify teacher
-router.put("/teachers/:id/verify", adminMiddleware, async (req, res) => {
+router.put("/teachers/:id/verify", async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { is_verified } = req.body;
@@ -183,7 +180,7 @@ router.get("/courses/pending", async (req, res) => {
 });
 
 // Approve course
-router.put("/courses/:id/approve", adminMiddleware, async (req, res) => {
+router.put("/courses/:id/approve", async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { userId } = req.user;
@@ -217,7 +214,7 @@ router.put("/courses/:id/approve", adminMiddleware, async (req, res) => {
 });
 
 // Reject course
-router.put("/courses/:id/reject", adminMiddleware, async (req, res) => {
+router.put("/courses/:id/reject", async (req, res) => {
 	try {
 		const { id } = req.params;
 		const { userId } = req.user;
@@ -250,6 +247,8 @@ router.put("/courses/:id/reject", adminMiddleware, async (req, res) => {
 		res.status(500).json({ error: "Server error" });
 	}
 });
+
+// Get pending bundles (only teacher-created)
 router.get("/bundles/pending", async (req, res) => {
 	try {
 		const result = await pool.query(`
@@ -262,8 +261,8 @@ router.get("/bundles/pending", async (req, res) => {
 				 JOIN courses c ON bc.course_id = c.id
 				 WHERE bc.bundle_id = b.id) as courses
 			FROM course_bundles b
-			JOIN teachers t ON b.teacher_id = t.id
-			WHERE b.is_active = false
+			LEFT JOIN teachers t ON b.teacher_id = t.id
+			WHERE b.is_active = false AND (b.created_by_admin IS NULL OR b.created_by_admin = false)
 			ORDER BY b.created_at DESC
 		`);
 		res.json({ bundles: result.rows });
@@ -273,7 +272,7 @@ router.get("/bundles/pending", async (req, res) => {
 	}
 });
 
-// Get all bundles (approved and pending)
+// Get all bundles (both admin and teacher created)
 router.get("/bundles", async (req, res) => {
 	try {
 		const result = await pool.query(`
@@ -281,12 +280,16 @@ router.get("/bundles", async (req, res) => {
 				b.*,
 				t.full_name as teacher_name,
 				t.email as teacher_email,
+				CASE 
+					WHEN b.created_by_admin = true THEN 'Admin'
+					ELSE 'Teacher'
+				END as created_by_type,
 				(SELECT json_agg(json_build_object('id', c.id, 'title', c.title, 'price', c.price))
 				 FROM bundle_courses bc
 				 JOIN courses c ON bc.course_id = c.id
 				 WHERE bc.bundle_id = b.id) as courses
 			FROM course_bundles b
-			JOIN teachers t ON b.teacher_id = t.id
+			LEFT JOIN teachers t ON b.teacher_id = t.id
 			ORDER BY b.created_at DESC
 		`);
 		res.json({ bundles: result.rows });
@@ -296,8 +299,106 @@ router.get("/bundles", async (req, res) => {
 	}
 });
 
+// Create bundle (Admin only - can pick from ANY approved courses)
+router.post("/bundles", async (req, res) => {
+	try {
+		const { userId } = req.user;
+		const { title, description, course_ids, discount_percentage } = req.body;
+
+		// Validation
+		if (!title || !course_ids || course_ids.length !== 3) {
+			return res
+				.status(400)
+				.json({ error: "Bundle must have exactly 3 courses" });
+		}
+
+		if (discount_percentage < 0 || discount_percentage > 100) {
+			return res
+				.status(400)
+				.json({ error: "Discount must be between 0 and 100" });
+		}
+
+		// Verify all courses are approved
+		const coursesCheck = await pool.query(
+			`SELECT id, price FROM courses 
+			 WHERE id = ANY($1) AND approval_status = 'approved'`,
+			[course_ids],
+		);
+
+		if (coursesCheck.rows.length !== 3) {
+			return res.status(400).json({
+				error: "All 3 courses must be approved",
+			});
+		}
+
+		// Calculate prices
+		const total_price = coursesCheck.rows.reduce(
+			(sum, course) => sum + parseFloat(course.price),
+			0,
+		);
+		const discounted_price = total_price * (1 - discount_percentage / 100);
+
+		const client = await pool.connect();
+		try {
+			await client.query("BEGIN");
+
+			// Create bundle (admin-created, auto-approved)
+			const bundleResult = await client.query(
+				`INSERT INTO course_bundles 
+				(teacher_id, title, description, discount_percentage, total_price, discounted_price, is_active, created_by_admin, created_by)
+				VALUES (NULL, $1, $2, $3, $4, $5, true, true, $6) RETURNING *`,
+				[
+					title,
+					description,
+					discount_percentage,
+					total_price,
+					discounted_price,
+					userId,
+				],
+			);
+
+			const bundleId = bundleResult.rows[0].id;
+
+			// Add courses to bundle
+			for (const courseId of course_ids) {
+				await client.query(
+					"INSERT INTO bundle_courses (bundle_id, course_id) VALUES ($1, $2)",
+					[bundleId, courseId],
+				);
+			}
+
+			await client.query("COMMIT");
+
+			// Fetch complete bundle
+			const completeBundle = await pool.query(
+				`SELECT b.*, 
+				  (SELECT json_agg(json_build_object('id', c.id, 'title', c.title, 'price', c.price))
+				   FROM bundle_courses bc
+				   JOIN courses c ON bc.course_id = c.id
+				   WHERE bc.bundle_id = b.id) as courses
+				FROM course_bundles b
+				WHERE b.id = $1`,
+				[bundleId],
+			);
+
+			res.status(201).json({
+				bundle: completeBundle.rows[0],
+				message: "Bundle created successfully",
+			});
+		} catch (err) {
+			await client.query("ROLLBACK");
+			throw err;
+		} finally {
+			client.release();
+		}
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Server error" });
+	}
+});
+
 // Approve bundle
-router.put("/bundles/:id/approve", adminMiddleware, async (req, res) => {
+router.put("/bundles/:id/approve", async (req, res) => {
 	try {
 		const { id } = req.params;
 
@@ -323,7 +424,7 @@ router.put("/bundles/:id/approve", adminMiddleware, async (req, res) => {
 });
 
 // Reject/Delete bundle
-router.delete("/bundles/:id", adminMiddleware, async (req, res) => {
+router.delete("/bundles/:id", async (req, res) => {
 	try {
 		const { id } = req.params;
 

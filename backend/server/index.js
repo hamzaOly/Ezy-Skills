@@ -14,8 +14,17 @@ import teacherAuthRoutes, {
 import teacherCoursesRoutes, {
 	setPool as setTeacherCoursesPool,
 } from "../routes/teacherCourses.js";
-
 import coursesRoutes, { setPool as setCoursesPool } from "../routes/Courses.js";
+import paymentRoutes, {
+	setPool as setPaymentPool,
+} from "../routes/payments.js";
+
+// ✅ FIXED: Correct middleware path
+import {
+	authenticateToken,
+	requireTeacher,
+	requireAdmin,
+} from "../middlewere/authMiddlewere.js";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -44,19 +53,22 @@ setTeacherAuthPool(pool);
 setTeacherCoursesPool(pool);
 setTeacherBundlesPool(pool);
 setCoursesPool(pool);
-setTeacherBundlesPool(pool);
+setPaymentPool(pool);
 
 // Test DB connection
 (async () => {
 	try {
 		const result = await pool.query("SELECT NOW()");
-		console.log("Connected to PostgreSQL ✅", result.rows[0]);
+		console.log("✅ Connected to PostgreSQL", result.rows[0]);
 	} catch (err) {
-		console.error("DB connection failed ❌", err.message);
+		console.error("❌ DB connection failed", err.message);
 	}
 })();
 
-// Routes
+// ============================================
+// PUBLIC ROUTES (No Authentication Required)
+// ============================================
+
 app.get("/", (req, res) => {
 	res.json({ message: "Backend server is running!" });
 });
@@ -69,21 +81,65 @@ app.get("/api/test", (req, res) => {
 	res.json({ message: "Backend is working!", timestamp: new Date() });
 });
 
-app.use("/api/teacher-bundles", teacherBundlesRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/courses", coursesRoutes);
-app.use("/api/teacher-bundles", teacherBundlesRoutes);
-
-// Student & General Auth Routes
+// Student & General Auth Routes (login, register)
 app.use("/api/auth", authRoutes);
 
-// Teacher Auth Routes
+// Teacher Auth Routes (teacher registration, login)
 app.use("/api/auth/teacher", teacherAuthRoutes);
 
-// Teacher Courses Routes
-app.use("/api/teacher-courses", teacherCoursesRoutes);
+// Public Courses Routes (browse courses without login)
+app.use("/api/courses", coursesRoutes);
 
-// Get all users (for testing)
+// Public Bundles Route (browse pricing without login)
+app.get("/api/bundles/public", async (req, res) => {
+	try {
+		const result = await pool.query(`
+			SELECT 
+				b.*,
+				t.full_name as teacher_name,
+				(SELECT json_agg(json_build_object('id', c.id, 'title', c.title, 'price', c.price, 'category', c.category))
+				 FROM bundle_courses bc
+				 JOIN courses c ON bc.course_id = c.id
+				 WHERE bc.bundle_id = b.id) as courses
+			FROM course_bundles b
+			LEFT JOIN teachers t ON b.teacher_id = t.id
+			WHERE b.is_active = true
+			ORDER BY b.created_at DESC
+		`);
+		res.json({ bundles: result.rows });
+	} catch (err) {
+		console.error(err);
+		res.status(500).json({ error: "Server error" });
+	}
+});
+
+// ============================================
+// PROTECTED ROUTES (Authentication Required)
+// ============================================
+
+// ✅ Teacher Routes - Require Authentication + Teacher Role
+app.use(
+	"/api/teacher-courses",
+	authenticateToken,
+	requireTeacher,
+	teacherCoursesRoutes,
+);
+app.use(
+	"/api/teacher-bundles",
+	authenticateToken,
+	requireTeacher,
+	teacherBundlesRoutes,
+);
+
+// Admin Routes - Require Authentication + Admin Role
+app.use("/api/admin", authenticateToken, requireAdmin, adminRoutes);
+
+app.use("/api/payments", paymentRoutes);
+// ============================================
+// TESTING ROUTES
+// ============================================
+
+// Get all users (for testing only - should be protected in production)
 app.get("/api/users", async (req, res) => {
 	try {
 		const result = await pool.query(
@@ -95,9 +151,33 @@ app.get("/api/users", async (req, res) => {
 	}
 });
 
-// Start server
+// ============================================
+// ERROR HANDLING
+// ============================================
+
+// 404 handler
+app.use((req, res) => {
+	res.status(404).json({ error: "Route not found" });
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+	console.error("Server error:", err);
+	res.status(500).json({
+		error: "Internal server error",
+		message: err.message,
+	});
+});
+
+// ============================================
+// START SERVER
+// ============================================
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
 	console.log(`✅ Server running on port ${PORT}`);
 	console.log(`📍 API available at http://localhost:${PORT}/api`);
+	console.log(
+		`📍 Protected routes require Bearer token in Authorization header`,
+	);
 });

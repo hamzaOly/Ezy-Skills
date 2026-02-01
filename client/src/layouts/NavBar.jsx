@@ -9,19 +9,16 @@ import logo from "../assets/logo.png";
 
 export default function Navbar() {
 	const [isOpen, setIsOpen] = useState(false);
+	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
-	const [user, setUser] = useState(() => {
-		// Initialize user state from localStorage
-		return isAuthenticated() ? getCurrentUser() : null;
-	});
+	const [user, setUser] = useState(() =>
+		isAuthenticated() ? getCurrentUser() : null,
+	);
 	const location = useLocation();
 	const navigate = useNavigate();
 
-	// Detect scroll
 	useEffect(() => {
-		const handleScroll = () => {
-			setScrolled(window.scrollY > 0);
-		};
+		const handleScroll = () => setScrolled(window.scrollY > 0);
 		window.addEventListener("scroll", handleScroll);
 		return () => window.removeEventListener("scroll", handleScroll);
 	}, []);
@@ -37,17 +34,12 @@ export default function Navbar() {
 
 	const isActive = (path) => location.pathname === path;
 
-	const handleCreateAccountClick = () => {
-		navigate("/createaccount");
-	};
-
-	const handleLoginClick = () => {
-		navigate("/login");
-	};
-
+	const handleCreateAccountClick = () => navigate("/createaccount");
+	const handleLoginClick = () => navigate("/login");
 	const handleLogout = () => {
 		logout();
 		setUser(null);
+		setDropdownOpen(false);
 		navigate("/");
 	};
 
@@ -56,7 +48,6 @@ export default function Navbar() {
 			className={`${location.pathname === "/FAQ" ? "bg-transparent text-white" : "bg-white text-gray-700 shadow-md"} w-full sticky top-0 z-50 transition-shadow duration-200 ${scrolled ? "shadow-lg" : ""}`}>
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 				<div className="flex justify-between items-center h-16 lg:h-25">
-					{/* Logo */}
 					<Link to="/" className="shrink-0">
 						<img
 							src={logo}
@@ -79,10 +70,11 @@ export default function Navbar() {
 							</Link>
 						))}
 
-						{/* Show user info if logged in, otherwise show login/create account buttons */}
 						{user ? (
-							<div className="relative group">
-								<button className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors">
+							<div className="relative">
+								<button
+									onClick={() => setDropdownOpen(!dropdownOpen)}
+									className="flex items-center space-x-2 text-sm font-medium text-gray-700 hover:text-orange-600 transition-colors">
 									<div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-semibold">
 										{user.email?.charAt(0).toUpperCase()}
 									</div>
@@ -101,62 +93,47 @@ export default function Navbar() {
 									</svg>
 								</button>
 
-								{/* Dropdown Menu */}
-								<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-									<Link
-										to="/dashboard"
-										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-										Dashboard
-									</Link>
-									<Link
-										to="/my-courses"
-										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-										My Courses
-									</Link>
-									<Link
-										to="/profile"
-										className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-										Profile
-									</Link>
-									<hr className="my-2" />
-									<button
-										onClick={handleLogout}
-										className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 transition-colors">
-										Logout
-									</button>
-								</div>
+								{dropdownOpen && (
+									<div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 transition-all duration-200">
+										<Link
+											to="/dashboard"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+											onClick={() => setDropdownOpen(false)}>
+											Dashboard
+										</Link>
+										<Link
+											to="/my-courses"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+											onClick={() => setDropdownOpen(false)}>
+											My Courses
+										</Link>
+										<Link
+											to="/profile"
+											className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+											onClick={() => setDropdownOpen(false)}>
+											Profile
+										</Link>
+										<hr className="my-2" />
+										<button
+											onClick={handleLogout}
+											className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100">
+											Logout
+										</button>
+									</div>
+								)}
 							</div>
 						) : (
 							<>
-								<Link to="/login">
-									<button
-										className="text-sm font-medium px-6 py-2 rounded-md border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-all duration-200 whitespace-nowrap"
-										onMouseEnter={(e) => {
-											e.target.style.backgroundColor = "#FF5329";
-											e.target.style.color = "white";
-										}}
-										onMouseLeave={(e) => {
-											e.target.style.backgroundColor = "white";
-											e.target.style.color = "#FF5329";
-										}}
-										onClick={handleLoginClick}>
-										Log In
-									</button>
-								</Link>
-								<Link to={"/createaccount"}>
-									<button
-										onClick={handleCreateAccountClick}
-										className="text-sm font-medium px-6 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 transition-all duration-200 whitespace-nowrap"
-										style={{ backgroundColor: "#FF5329" }}
-										onMouseEnter={(e) =>
-											(e.target.style.backgroundColor = "#E64A24")
-										}
-										onMouseLeave={(e) =>
-											(e.target.style.backgroundColor = "#FF5329")
-										}>
-										Create Account
-									</button>
-								</Link>
+								<button
+									onClick={handleLoginClick}
+									className="text-sm font-medium px-6 py-2 rounded-md border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-all duration-200 whitespace-nowrap">
+									Log In
+								</button>
+								<button
+									onClick={handleCreateAccountClick}
+									className="text-sm font-medium px-6 py-2 rounded-md bg-orange-600 text-white hover:bg-orange-700 transition-all duration-200 whitespace-nowrap">
+									Create Account
+								</button>
 							</>
 						)}
 					</div>
@@ -207,11 +184,7 @@ export default function Navbar() {
 								key={item.name}
 								to={item.href}
 								onClick={() => setIsOpen(false)}
-								className={`block px-4 py-3 rounded-md text-base font-medium transition-colors duration-200 ${
-									isActive(item.href)
-										? "bg-orange-50 text-orange-600"
-										: "text-gray-700 hover:bg-gray-50 hover:text-orange-600"
-								}`}>
+								className={`block px-4 py-3 rounded-md text-base font-medium transition-colors duration-200 ${isActive(item.href) ? "bg-orange-50 text-orange-600" : "text-gray-700 hover:bg-gray-50 hover:text-orange-600"}`}>
 								{item.name}
 							</Link>
 						))}
@@ -222,13 +195,17 @@ export default function Navbar() {
 									<div className="px-4 py-2 text-sm text-gray-700 font-semibold border-b border-gray-200">
 										{user.email}
 									</div>
-									<Link to="/dashboard" onClick={() => setIsOpen(false)}>
-										<button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+									<Link to="/dashboard">
+										<button
+											onClick={() => setIsOpen(false)}
+											className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
 											Dashboard
 										</button>
 									</Link>
-									<Link to="/my-courses" onClick={() => setIsOpen(false)}>
-										<button className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+									<Link to="/my-courses">
+										<button
+											onClick={() => setIsOpen(false)}
+											className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
 											My Courses
 										</button>
 									</Link>
@@ -243,21 +220,16 @@ export default function Navbar() {
 								</>
 							) : (
 								<>
-									<Link to={"/login"}>
-										<button
-											onClick={handleLoginClick}
-											className="w-full px-4 py-3 rounded-md text-sm font-medium border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-colors duration-200">
-											Log In
-										</button>
-									</Link>
-									<Link to={"/createaccount"}>
-										<button
-											onClick={handleCreateAccountClick}
-											className="w-full px-4 py-3 rounded-md text-sm font-medium text-white transition-colors duration-200"
-											style={{ backgroundColor: "#FF5329" }}>
-											Create Account
-										</button>
-									</Link>
+									<button
+										onClick={handleLoginClick}
+										className="w-full px-4 py-3 rounded-md text-sm font-medium border-2 border-orange-600 text-orange-600 bg-white hover:bg-orange-50 transition-colors duration-200">
+										Log In
+									</button>
+									<button
+										onClick={handleCreateAccountClick}
+										className="w-full px-4 py-3 rounded-md text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 transition-colors duration-200">
+										Create Account
+									</button>
 								</>
 							)}
 						</div>

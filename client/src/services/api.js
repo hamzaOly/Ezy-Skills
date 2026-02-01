@@ -1,7 +1,35 @@
-import api from "./axios";
+import axios from "axios";
 
-export const getApiData = async () => {
-	// This will call http://localhost:5000/api (or just call the root without /api)
-	const response = await api.get("/");
-	return response.data;
-};
+const api = axios.create({
+	baseURL: "http://localhost:5000/api",
+	headers: {
+		"Content-Type": "application/json",
+	},
+});
+
+// Automatically attach token to every request
+api.interceptors.request.use(
+	(config) => {
+		const token = localStorage.getItem("token");
+		if (token) {
+			config.headers.Authorization = `Bearer ${token}`;
+		}
+		return config;
+	},
+	(error) => Promise.reject(error),
+);
+
+// Global response error handling
+api.interceptors.response.use(
+	(response) => response,
+	(error) => {
+		if (error.response?.status === 401 || error.response?.status === 403) {
+			localStorage.removeItem("token");
+			localStorage.removeItem("user");
+			window.location.href = "/";
+		}
+		return Promise.reject(error);
+	},
+);
+
+export default api;

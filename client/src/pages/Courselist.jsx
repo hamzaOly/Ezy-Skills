@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import CourseEnrollmentModal from "../components/Coursesenrollmentmodal.jsx";
+import { Link } from "react-router-dom";
 
 export default function CourseList() {
 	const [courses, setCourses] = useState([]);
@@ -173,9 +174,11 @@ export default function CourseList() {
 
 									{/* Course Content */}
 									<div className="p-6">
-										<h3 className="text-xl font-bold text-gray-800 mb-3">
-											{course.title}
-										</h3>
+										<Link to={`/courses/${course.id}`}>
+											<h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-orange-500 cursor-pointer">
+												{course.title}
+											</h3>
+										</Link>
 										<p className="text-sm text-gray-600 mb-4 line-clamp-3">
 											{course.description || "No description available"}
 										</p>

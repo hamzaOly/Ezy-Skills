@@ -66,5 +66,24 @@ router.get("/category/:category", async (req, res) => {
 		res.status(500).json({ error: "Server error" });
 	}
 });
+// Get course content
+router.get("/:id/content", async (req, res) => {
+	const { id } = req.params;
+	const result = await pool.query(
+		"SELECT * FROM course_content WHERE course_id = $1 ORDER BY section_number",
+		[id],
+	);
+	res.json({ content: result.rows });
+});
+
+// Get course projects
+router.get("/:id/projects", async (req, res) => {
+	const { id } = req.params;
+	const result = await pool.query(
+		"SELECT * FROM course_projects WHERE course_id = $1",
+		[id],
+	);
+	res.json({ projects: result.rows });
+});
 
 export default router;

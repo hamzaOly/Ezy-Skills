@@ -18,45 +18,6 @@ export default function Contact() {
 			{/* Orange Header Section */}
 			<div className="relative" style={{ backgroundColor: "#f37a3d" }}>
 				{/* Navigation */}
-				<nav className="relative z-20 max-w-7xl mx-auto px-4 flex items-center justify-between pt-6">
-					<div className="bg-white p-2 rounded shadow-sm">
-						<img
-							src="https://csspicker.dev/api/image/?q=ezy+skills+logo&image_type=vector"
-							alt="EZY SKILLS"
-							className="h-8 w-auto"
-						/>
-					</div>
-
-					<div className="hidden md:flex items-center space-x-6 text-white text-sm font-medium">
-						<a href="#" className="hover:opacity-80">
-							Home
-						</a>
-						<a href="#" className="hover:opacity-80">
-							Course Selector
-						</a>
-						<a href="#" className="hover:opacity-80">
-							Courses
-						</a>
-						<a href="#" className="hover:opacity-80">
-							Pricing
-						</a>
-						<a href="#" className="hover:opacity-80">
-							FAQ
-						</a>
-						<a href="#" className="hover:opacity-80">
-							Contact US
-						</a>
-					</div>
-
-					<div className="flex items-center space-x-3">
-						<button className="text-white border border-white px-4 py-1.5 rounded text-sm hover:bg-white hover:text-[#f37a3d] transition-colors">
-							Log in
-						</button>
-						<button className="bg-white text-[#f37a3d] px-4 py-1.5 rounded text-sm font-semibold hover:bg-gray-100 transition-colors">
-							Create Account
-						</button>
-					</div>
-				</nav>
 
 				{/* Header Content */}
 				<div className="relative z-10 max-w-4xl mx-auto px-4 pt-16 pb-32">
@@ -225,7 +186,7 @@ export default function Contact() {
 				))}
 			</div>
 
-			<div className="absolute right-0 bottom-20 w-32 h-32 border-[10px] border-orange-400 rounded-full opacity-30 translate-x-1/2"></div>
+			<div className="absolute right-0 bottom-20 w-32 h-32 border-10 border-orange-400 rounded-full opacity-30 translate-x-1/2"></div>
 		</div>
 	);
 }

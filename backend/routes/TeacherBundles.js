@@ -1,6 +1,5 @@
 // backend/routes/teacherBundles.js
 import express from "express";
-import jwt from "jsonwebtoken";
 
 const router = express.Router();
 let pool;
@@ -9,29 +8,12 @@ export const setPool = (dbPool) => {
 	pool = dbPool;
 };
 
-// Middleware to verify token
-const authMiddleware = (req, res, next) => {
-	const authHeader = req.headers.authorization;
-	if (!authHeader) return res.status(401).json({ error: "No token provided" });
-
-	const token = authHeader.split(" ")[1];
-	try {
-		const decoded = jwt.verify(
-			token,
-			process.env.JWT_SECRET || "your-secret-key",
-		);
-		req.user = decoded;
-		next();
-	} catch (err) {
-		return res.status(401).json({ error: "Invalid token" });
-	}
-};
+// ✅ NO AUTH MIDDLEWARE HERE - It's applied in index.js
 
 // GET all teacher's bundles
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/", async (req, res) => {
 	try {
-		const { teacherId, role } = req.user;
-		if (role !== "teacher") return res.status(403).json({ error: "Forbidden" });
+		const { teacherId } = req.user;
 
 		const bundles = await pool.query(
 			`SELECT b.*, 
@@ -53,11 +35,9 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // POST create new bundle
-router.post("/", authMiddleware, async (req, res) => {
+router.post("/", async (req, res) => {
 	try {
-		const { teacherId, role } = req.user;
-		if (role !== "teacher") return res.status(403).json({ error: "Forbidden" });
-
+		const { teacherId } = req.user;
 		const { title, description, course_ids, discount_percentage } = req.body;
 
 		// Validation
@@ -154,11 +134,9 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 // PUT update bundle
-router.put("/:id", authMiddleware, async (req, res) => {
+router.put("/:id", async (req, res) => {
 	try {
-		const { teacherId, role } = req.user;
-		if (role !== "teacher") return res.status(403).json({ error: "Forbidden" });
-
+		const { teacherId } = req.user;
 		const { id } = req.params;
 		const { title, description, discount_percentage, is_active } = req.body;
 
@@ -213,11 +191,9 @@ router.put("/:id", authMiddleware, async (req, res) => {
 });
 
 // DELETE bundle
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/:id", async (req, res) => {
 	try {
-		const { teacherId, role } = req.user;
-		if (role !== "teacher") return res.status(403).json({ error: "Forbidden" });
-
+		const { teacherId } = req.user;
 		const { id } = req.params;
 
 		const result = await pool.query(
@@ -236,7 +212,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 	}
 });
 
-// GET public bundles (for students)
+// GET public bundles (for students - NO AUTH REQUIRED)
 router.get("/public", async (req, res) => {
 	try {
 		const bundles = await pool.query(

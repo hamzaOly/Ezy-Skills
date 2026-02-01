@@ -28,21 +28,18 @@ export default function Login() {
 
 			// 🔹 login() returns { token, user }
 			const response = await login(formData.email, formData.password);
-
 			const loggedUser = response.user;
 
 			if (!loggedUser || !loggedUser.role) {
 				throw new Error("Invalid login response");
 			}
 
-			// ✅ ROLE-BASED REDIRECT
-			if (loggedUser.role === "teacher") {
-				navigate("/teacher-dashboard");
-			} else if (loggedUser.role === "admin") {
-				navigate("/admin-dashboard");
-			} else {
-				window.location.href = "/";
-			}
+			// 🔹 ROLE-BASED REDIRECT
+			let path = "/dashboard"; // افتراضي للمستخدم العادي
+			if (loggedUser.role === "admin") path = "/admin-dashboard";
+			else if (loggedUser.role === "teacher") path = "/teacher-dashboard";
+
+			navigate(path);
 		} catch (err) {
 			setError(err.message || err);
 		} finally {

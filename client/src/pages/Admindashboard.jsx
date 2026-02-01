@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser, logout } from "../services/authService";
+// import link  from 'react-router-dom';
+
+import api from "../services/api";
 
 export default function AdminDashboard() {
 	const navigate = useNavigate();
-
 	const [user] = useState(() => {
-		const currentUser = getCurrentUser();
-		if (!currentUser || currentUser.role !== "admin") {
-			return null;
-		}
+		const userStr = localStorage.getItem("user");
+		const currentUser = userStr ? JSON.parse(userStr) : null;
+		if (!currentUser || currentUser.role !== "admin") return null;
 		return currentUser;
 	});
 
-	const [activeTab, setActiveTab] = useState("overview");
 	const [stats, setStats] = useState({
 		totalUsers: 0,
 		totalTeachers: 0,
@@ -24,283 +23,142 @@ export default function AdminDashboard() {
 		pendingCourses: 0,
 		pendingBundles: 0,
 	});
+
 	const [users, setUsers] = useState([]);
 	const [courses, setCourses] = useState([]);
 	const [teachers, setTeachers] = useState([]);
 	const [pendingCourses, setPendingCourses] = useState([]);
 	const [bundles, setBundles] = useState([]);
 	const [pendingBundles, setPendingBundles] = useState([]);
+	const [activeTab, setActiveTab] = useState("overview");
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
 
 	const fetchDashboardData = useCallback(async () => {
 		try {
+			setLoading(true);
+
 			const [usersRes, coursesRes, teachersRes, pendingCoursesRes, bundlesRes] =
 				await Promise.all([
-					fetch("http://localhost:5000/api/admin/users"),
-					fetch("http://localhost:5000/api/admin/courses"),
-					fetch("http://localhost:5000/api/admin/teachers"),
-					fetch("http://localhost:5000/api/admin/courses/pending"),
-					fetch("http://localhost:5000/api/admin/bundles"),
+					api.get("/admin/users"),
+					api.get("/admin/courses"),
+					api.get("/admin/teachers"),
+					api.get("/admin/courses/pending"),
+					api.get("/admin/bundles"),
 				]);
 
-			const usersData = await usersRes.json();
-			const coursesData = await coursesRes.json();
-			const teachersData = await teachersRes.json();
-			const pendingCoursesData = await pendingCoursesRes.json();
-			const bundlesData = await bundlesRes.json();
-
-			setUsers(usersData.users || []);
-			setCourses(coursesData.courses || []);
-			setTeachers(teachersData.teachers || []);
-			setPendingCourses(pendingCoursesData.courses || []);
-			setBundles(bundlesData.bundles || []);
-			setPendingBundles(bundlesData.bundles?.filter((b) => !b.is_active) || []);
+			setUsers(usersRes.data.users || []);
+			setCourses(coursesRes.data.courses || []);
+			setTeachers(teachersRes.data.teachers || []);
+			setPendingCourses(pendingCoursesRes.data.courses || []);
+			setBundles(bundlesRes.data.bundles || []);
+			setPendingBundles(
+				bundlesRes.data.bundles?.filter((b) => !b.is_active) || [],
+			);
 
 			setStats({
-				totalUsers: usersData.users?.length || 0,
+				totalUsers: usersRes.data.users?.length || 0,
 				totalTeachers:
-					usersData.users?.filter((u) => u.role === "teacher").length || 0,
+					usersRes.data.users?.filter((u) => u.role === "teacher").length || 0,
 				totalStudents:
-					usersData.users?.filter((u) => u.role === "student").length || 0,
-				totalCourses: coursesData.courses?.length || 0,
+					usersRes.data.users?.filter((u) => u.role === "student").length || 0,
+				totalCourses: coursesRes.data.courses?.length || 0,
 				totalEnrollments: 0,
 				totalRevenue: 0,
-				pendingCourses: pendingCoursesData.courses?.length || 0,
+				pendingCourses: pendingCoursesRes.data.courses?.length || 0,
 				pendingBundles:
-					bundlesData.bundles?.filter((b) => !b.is_active).length || 0,
+					bundlesRes.data.bundles?.filter((b) => !b.is_active).length || 0,
 			});
 
-			setLoading(false);
-		} catch (error) {
-			console.error("Error fetching dashboard data:", error);
+			setError(null);
+		} catch (err) {
+			console.error("Admin dashboard error:", err);
+			setError("Failed to load admin dashboard data");
+		} finally {
 			setLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
 		if (!user) {
-			navigate("/");
+			window.location.href = "/";
 			return;
 		}
 		fetchDashboardData();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [user, fetchDashboardData]);
 
-	const handleLogout = () => {
-		logout();
-		navigate("/");
-	};
+	/* ================= ACTIONS ================= */
 
 	const handleDeleteUser = async (userId) => {
 		if (!window.confirm("Are you sure you want to delete this user?")) return;
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/users/${userId}`,
-				{
-					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				alert("User deleted successfully");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error deleting user:", error);
-			alert("Failed to delete user");
-		}
+		await api.delete(`/admin/users/${userId}`);
+		fetchDashboardData();
 	};
 
 	const handleDeleteCourse = async (courseId) => {
 		if (!window.confirm("Are you sure you want to delete this course?")) return;
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/courses/${courseId}`,
-				{
-					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				alert("Course deleted successfully");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error deleting course:", error);
-			alert("Failed to delete course");
-		}
+		await api.delete(`/admin/courses/${courseId}`);
+		fetchDashboardData();
 	};
 
 	const handleApproveCourse = async (courseId) => {
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/courses/${courseId}/approve`,
-				{
-					method: "PUT",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				alert("Course approved successfully");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error approving course:", error);
-			alert("Failed to approve course");
-		}
+		await api.put(`/admin/courses/${courseId}/approve`);
+		fetchDashboardData();
 	};
 
 	const handleRejectCourse = async (courseId) => {
 		const reason = window.prompt("Enter rejection reason (optional):");
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/courses/${courseId}/reject`,
-				{
-					method: "PUT",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						rejection_reason: reason || "No reason provided",
-					}),
-				},
-			);
-
-			if (response.ok) {
-				alert("Course rejected");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error rejecting course:", error);
-			alert("Failed to reject course");
-		}
+		await api.put(`/admin/courses/${courseId}/reject`, {
+			rejection_reason: reason || "No reason provided",
+		});
+		fetchDashboardData();
 	};
 
 	const handleApproveBundle = async (bundleId) => {
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/bundles/${bundleId}/approve`,
-				{
-					method: "PUT",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				alert(
-					"Bundle approved successfully! It will now appear on the pricing page.",
-				);
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error approving bundle:", error);
-			alert("Failed to approve bundle");
-		}
+		await api.put(`/admin/bundles/${bundleId}/approve`);
+		fetchDashboardData();
 	};
 
 	const handleRejectBundle = async (bundleId) => {
-		if (!window.confirm("Are you sure you want to reject this bundle?")) return;
-
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/bundles/${bundleId}`,
-				{
-					method: "DELETE",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (response.ok) {
-				alert("Bundle rejected");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error rejecting bundle:", error);
-			alert("Failed to reject bundle");
-		}
+		if (!window.confirm("Reject this bundle?")) return;
+		await api.delete(`/admin/bundles/${bundleId}`);
+		fetchDashboardData();
 	};
 
 	const handleVerifyTeacher = async (teacherId, isVerified) => {
-		try {
-			const token = localStorage.getItem("token");
-			const response = await fetch(
-				`http://localhost:5000/api/admin/teachers/${teacherId}/verify`,
-				{
-					method: "PUT",
-					headers: {
-						Authorization: `Bearer ${token}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ is_verified: !isVerified }),
-				},
-			);
-
-			if (response.ok) {
-				alert("Teacher verification updated");
-				fetchDashboardData();
-			}
-		} catch (error) {
-			console.error("Error updating teacher:", error);
-			alert("Failed to update teacher");
-		}
+		await api.put(`/admin/teachers/${teacherId}/verify`, {
+			is_verified: !isVerified,
+		});
+		fetchDashboardData();
 	};
+
+	/* ================= UI STATES ================= */
 
 	if (loading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center">
-				<div className="text-2xl">Loading...</div>
+				<div className="text-xl font-semibold">Loading dashboard...</div>
 			</div>
 		);
 	}
 
+	if (error) {
+		return (
+			<div className="min-h-screen flex items-center justify-center">
+				<div className="bg-white p-6 rounded shadow">
+					<p className="text-red-600 mb-4">{error}</p>
+					<button
+						onClick={() => (window.location.href = "/")}
+						className="bg-blue-600 text-white px-4 py-2 rounded">
+						Go Home
+					</button>
+				</div>
+			</div>
+		);
+	}
 	return (
 		<div className="min-h-screen bg-gray-100">
 			{/* Header */}
-			<header className="bg-white shadow">
-				<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-					<div className="flex justify-between items-center">
-						<h1 className="text-3xl font-bold text-gray-900">
-							Admin Dashboard
-						</h1>
-						<div className="flex items-center space-x-4">
-							<span className="text-sm text-gray-600">{user?.email}</span>
-							<button
-								onClick={handleLogout}
-								className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-								Logout
-							</button>
-						</div>
-					</div>
-				</div>
-			</header>
 
 			{/* Stats Cards */}
 			<div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -478,7 +336,6 @@ export default function AdminDashboard() {
 								</div>
 							</div>
 						)}
-
 						{/* Users Tab */}
 						{activeTab === "users" && (
 							<div>
@@ -542,7 +399,6 @@ export default function AdminDashboard() {
 								</div>
 							</div>
 						)}
-
 						{/* Courses Tab */}
 						{activeTab === "courses" && (
 							<div>
@@ -610,7 +466,6 @@ export default function AdminDashboard() {
 								</div>
 							</div>
 						)}
-
 						{/* Pending Courses Tab */}
 						{activeTab === "pending-courses" && (
 							<div>
@@ -671,11 +526,19 @@ export default function AdminDashboard() {
 								)}
 							</div>
 						)}
-
 						{/* Bundles Tab */}
+						/* Bundles Tab */
 						{activeTab === "bundles" && (
 							<div>
-								<h2 className="text-xl font-bold mb-4">Course Bundles</h2>
+								<div className="flex justify-between items-center mb-6">
+									<h2 className="text-xl font-bold">Course Bundles</h2>
+									<button
+										onClick={() => navigate("/admin/create-bundle")}
+										className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 font-semibold flex items-center gap-2">
+										<span className="text-lg">+</span>
+										Create New Bundle
+									</button>
+								</div>
 
 								{/* Pending Bundles */}
 								<div className="mb-8">
@@ -698,7 +561,6 @@ export default function AdminDashboard() {
 													<p className="text-sm text-gray-600 mb-4">
 														{bundle.description}
 													</p>
-
 													<div className="mb-4">
 														<p className="text-xs text-gray-500 mb-2">
 															Teacher: {bundle.teacher_name}
@@ -714,7 +576,6 @@ export default function AdminDashboard() {
 															))}
 														</ul>
 													</div>
-
 													<div className="bg-white rounded p-3 mb-4">
 														<div className="flex justify-between text-sm mb-1">
 															<span>Total Price:</span>
@@ -738,7 +599,6 @@ export default function AdminDashboard() {
 															<span>₹{bundle.discounted_price}</span>
 														</div>
 													</div>
-
 													<div className="flex gap-2">
 														<button
 															onClick={() => handleApproveBundle(bundle.id)}
@@ -770,17 +630,30 @@ export default function AdminDashboard() {
 												<div
 													key={bundle.id}
 													className="border rounded-lg p-6 bg-white shadow">
-													<h4 className="text-lg font-bold text-gray-900 mb-2">
-														{bundle.title}
-													</h4>
+													<div className="flex justify-between items-start mb-2">
+														<h4 className="text-lg font-bold text-gray-900 flex-1">
+															{bundle.title}
+														</h4>
+														{bundle.bundle_source && (
+															<span
+																className={`text-xs px-2 py-1 rounded-full ${
+																	bundle.bundle_source === "Admin Created"
+																		? "bg-purple-100 text-purple-800"
+																		: "bg-blue-100 text-blue-800"
+																}`}>
+																{bundle.bundle_source}
+															</span>
+														)}
+													</div>
 													<p className="text-sm text-gray-600 mb-4">
 														{bundle.description}
 													</p>
-
 													<div className="mb-4">
-														<p className="text-xs text-gray-500 mb-2">
-															Teacher: {bundle.teacher_name}
-														</p>
+														{bundle.teacher_name && (
+															<p className="text-xs text-gray-500 mb-2">
+																Teacher: {bundle.teacher_name}
+															</p>
+														)}
 														<ul className="list-disc list-inside text-sm">
 															{bundle.courses?.map((course, idx) => (
 																<li key={idx} className="text-gray-700">
@@ -789,7 +662,6 @@ export default function AdminDashboard() {
 															))}
 														</ul>
 													</div>
-
 													<div className="flex justify-between items-center">
 														<span className="text-xl font-bold text-orange-500">
 															₹{bundle.discounted_price}
@@ -804,7 +676,6 @@ export default function AdminDashboard() {
 								</div>
 							</div>
 						)}
-
 						{/* Teachers Tab */}
 						{activeTab === "teachers" && (
 							<div>

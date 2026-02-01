@@ -10,7 +10,7 @@ export const setPool = (dbPool) => {
 	pool = dbPool;
 };
 
-// Teacher Register - Route is /register (not /register/teacher)
+// ================= TEACHER REGISTER =================
 router.post("/register", async (req, res) => {
 	try {
 		const {
@@ -105,7 +105,7 @@ router.post("/register", async (req, res) => {
 
 			await client.query("COMMIT");
 
-			// Generate JWT
+			// Generate JWT with teacherId
 			const token = jwt.sign(
 				{
 					userId: newUser.id,
@@ -137,6 +137,72 @@ router.post("/register", async (req, res) => {
 	} catch (error) {
 		console.error("Teacher registration error:", error);
 		res.status(500).json({ error: "Server error during teacher registration" });
+	}
+});
+
+// ================= TEACHER LOGIN =================
+router.post("/login", async (req, res) => {
+	try {
+		const { email, password } = req.body;
+
+		if (!email || !password) {
+			return res.status(400).json({ error: "Email and password are required" });
+		}
+
+		// Get user
+		const userResult = await pool.query(
+			"SELECT * FROM users WHERE email = $1 AND role = 'teacher'",
+			[email],
+		);
+
+		if (userResult.rows.length === 0) {
+			return res.status(401).json({ error: "Invalid credentials" });
+		}
+
+		const user = userResult.rows[0];
+
+		// Check password
+		const validPassword = await bcrypt.compare(password, user.password);
+		if (!validPassword) {
+			return res.status(401).json({ error: "Invalid credentials" });
+		}
+
+		// ✅ GET TEACHER ID
+		const teacherResult = await pool.query(
+			"SELECT id FROM teachers WHERE user_id = $1",
+			[user.id],
+		);
+
+		if (teacherResult.rows.length === 0) {
+			return res.status(404).json({ error: "Teacher profile not found" });
+		}
+
+		// ✅ CREATE TOKEN WITH teacherId
+		const token = jwt.sign(
+			{
+				userId: user.id,
+				email: user.email,
+				role: "teacher",
+				teacherId: teacherResult.rows[0].id,
+			},
+			process.env.JWT_SECRET || "your-secret-key",
+			{ expiresIn: "7d" },
+		);
+
+		res.json({
+			message: "Login successful",
+			user: {
+				id: user.id,
+				email: user.email,
+				full_name: user.full_name,
+				role: "teacher",
+				teacherId: teacherResult.rows[0].id,
+			},
+			token,
+		});
+	} catch (error) {
+		console.error("Teacher login error:", error);
+		res.status(500).json({ error: "Server error during login" });
 	}
 });
 
